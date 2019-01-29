@@ -16,10 +16,10 @@ A GRPC client is included to initiate continuous random calls to the APIs.
 
 To run the server:
 ```
-$ go run routeguide/cmd/server/main.go
+$ make -C routeguide run_server
 ```
 
 To run the client:
 ```
-$ go run routeguide/cmd/client/main.go
+$ make -C routeguide run_client
 ```
