@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package proto;
+package routeguideproto;
 
 service RouteGuide {
   // Obtains the feature at a given position
