@@ -36,6 +36,11 @@ spec:
         imagePullPolicy: Never
         command:
         - /rg-server
+        env:
+        - name: SERVER_PORT
+          value: "8080"
+        - name: FAULT_PERCENT
+          value: "0.0"
         ports:
         - name: grpc
           containerPort: 8080
@@ -48,6 +53,7 @@ metadata:
   labels:
     app: rg-client
 spec:
+  restart: Never
   selector:
     matchLabels:
       app: rg-client
@@ -65,3 +71,9 @@ spec:
         env:
         - name: SERVER_HOST
           value: rg-server
+        - name: SERVER_PORT
+          value: "8080"
+        - name: GRPC_TIMEOUT
+          value: "20s"
+        - name: MODE
+          value: "REPEATN"

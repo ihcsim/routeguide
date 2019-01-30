@@ -1,3 +1,4 @@
 *.swp
 route_guide/cmd/server/server
 routeguide/cmd/client/client
+routeguide/cmd/server/server

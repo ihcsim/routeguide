@@ -13,18 +13,16 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	pb "github.com/ihcsim/grpc-101/routeguide/proto"
 )
 
 // NewServer returns a new route guide server that exposes 4 GRPC APIs.
-func NewServer() (pb.RouteGuideServer, error) {
+func NewServer(faultPercent float64) (pb.RouteGuideServer, error) {
 	r := &routeGuideServer{
 		savedFeatures: []*pb.Feature{},
 		routeNotes:    make(map[string][]*pb.RouteNote),
-		faultPercent:  0.3,
+		faultPercent:  faultPercent,
 	}
 
 	err := json.Unmarshal(featuresData, &r.savedFeatures)
@@ -44,9 +42,8 @@ type routeGuideServer struct {
 
 func (r *routeGuideServer) triggerFault(api string) error {
 	if n := rand.Float64(); n <= r.faultPercent {
-		fault := "[%s] (fault) grpc server unavailable"
-		log.Printf(fault, api)
-		return status.Errorf(codes.Unavailable, fault, api)
+		log.Printf("%+v\n", GetFault(api))
+		return GetFault(api)
 	}
 
 	return nil
