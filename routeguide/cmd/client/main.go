@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/ihcsim/grpc-101/routeguide"
@@ -15,13 +16,19 @@ import (
 
 func main() {
 	var (
+		addr       = ""
 		port       = "8080"
 		opts       = []grpc.DialOption{grpc.WithInsecure()}
-		ctxTimeout = time.Second * 2
+		ctxTimeout = time.Second * 20
 		client     = routeguide.Client{}
 	)
 
-	conn, err := grpc.Dial(fmt.Sprintf(":%s", port), opts...)
+	override, exist := os.LookupEnv("SERVER_HOST")
+	if exist {
+		addr = override
+	}
+
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", addr, port), opts...)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,0 +1,67 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: rg-server
+  labels:
+    app: rg-server
+spec:
+  type: ClusterIP
+  selector:
+    app: rg-server
+  ports:
+  - name: grpc
+    port: 8080
+    targetPort: grpc
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rg-server
+  labels:
+    app: rg-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rg-server
+  template:
+    metadata:
+      labels:
+        app: rg-server
+    spec:
+      containers:
+      - name: rg-server
+        image: routeguide
+        imagePullPolicy: Never
+        command:
+        - /rg-server
+        ports:
+        - name: grpc
+          containerPort: 8080
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rg-client
+  labels:
+    app: rg-client
+spec:
+  selector:
+    matchLabels:
+      app: rg-client
+  template:
+    metadata:
+      labels:
+        app: rg-client
+    spec:
+      containers:
+      - name: rg-client
+        image: routeguide
+        imagePullPolicy: Never
+        command:
+        - /rg-client
+        env:
+        - name: SERVER_HOST
+          value: rg-server

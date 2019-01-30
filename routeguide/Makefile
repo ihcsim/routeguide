@@ -4,7 +4,11 @@ run_server:
 run_client:
 	go run cmd/client/main.go
 
-image:
+image_local:
+	docker build --rm -t routeguide .
+
+image_mkube:
+	@eval $$(minikube docker-env) ; \
 	docker build --rm -t routeguide .
 
 proto:
