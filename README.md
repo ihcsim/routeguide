@@ -1,12 +1,23 @@
-# grpc-101
+# routeguide
 This repository contains a GRPC programming exercise which is based on the [basic tutorial](https://grpc.io/docs/tutorials/basic/go.html) found in the official GRPC documentation.
 
 This exercise is developed using the following software:
 
 * Minikube v0.33.1
 * Go 1.10.2
+* Protoc 3.6.1
+* dep v0.5.0
 
-The GRPC server exposes the 4 interfaces as described in the official tutorial to demonstrate unary, client streaming, server streaming and full duplex RPCs.
+The objective is to explore the following GRPC features:
+
+* Unary RPC
+* Client streaming RPC
+* Server streaming RPC
+* Full duplex RPC
+* Interceptors (to return faulty responses)
+* Health checks
+
+The GRPC server exposes the 4 interfaces as described in the official tutorial:
 
 API            | Description
 -------------- | -----------
@@ -15,7 +26,7 @@ API            | Description
 `RecordRoute`  | Accepts a stream of points from the client and returns a summary of the route traversed.
 `RouteChat`    | Accepts a stream of route notes from the client and returns another stream of notes to the client.
 
-The GRPC server uses interceptors to return faulty responses. The `FAULT_PERCENT` environment variable can be used to adjust percentage of requests to be failed by the interceptors.
+The GRPC server uses interceptors to return faulty responses. The [`FAULT_PERCENT`](https://github.com/ihcsim/routeguide/blob/465e7b7c0e6a6fc662f4cecd6ae76b213cabddf0/k8s.yaml#L42) environment variable can be used to adjust percentage of requests to be failed by the interceptors.
 
 A GRPC client is included to call the APIs exposed by the GRPC server. It can be started in two modes:
 
