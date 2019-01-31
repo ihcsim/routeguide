@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"sync"
 
-	pb "github.com/ihcsim/grpc-101/routeguide/proto"
+	pb "github.com/ihcsim/routeguide/proto"
 )
 
 var (

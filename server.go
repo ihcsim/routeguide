@@ -13,7 +13,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 
-	pb "github.com/ihcsim/grpc-101/routeguide/proto"
+	pb "github.com/ihcsim/routeguide/proto"
 )
 
 // NewServer returns a new route guide server that exposes 4 GRPC APIs.

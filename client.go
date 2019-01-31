@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/ihcsim/grpc-101/routeguide/proto"
+	pb "github.com/ihcsim/routeguide/proto"
 )
 
 // Client knows how to communicate with the GRPC server.
