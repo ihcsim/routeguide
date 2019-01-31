@@ -36,14 +36,23 @@ spec:
         imagePullPolicy: Never
         command:
         - /rg-server
-        env:
-        - name: SERVER_PORT
-          value: "8080"
-        - name: FAULT_PERCENT
-          value: "0.0"
+        envFrom:
+        - configMapRef:
+            name: rg-server-config
         ports:
         - name: grpc
           containerPort: 8080
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rg-server-config
+  labels:
+    app: rg-server
+data:
+  SERVER_PORT: "8080"
+  FAULT_PERCENT: "0.0"
 
 ---
 kind: Pod
@@ -60,12 +69,21 @@ spec:
     imagePullPolicy: Never
     command:
     - /rg-client
-    env:
-    - name: SERVER_HOST
-      value: rg-server
-    - name: SERVER_PORT
-      value: "8080"
-    - name: GRPC_TIMEOUT
-      value: "20s"
-    - name: MODE
-      value: "REPEATN"
+    envFrom:
+    - configMapRef:
+        name: rg-client-config
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rg-client-config
+  labels:
+    app: rg-client
+data:
+  SERVER_HOST: rg-server
+  SERVER_PORT: "8080"
+  GRPC_TIMEOUT: "20s"
+  MODE: repeatn
+  MAX_REPEAT: "200"
+  REMOTE_API: GetFeature

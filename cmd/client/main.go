@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,10 +23,18 @@ const (
 	modeFirehose = "firehose"
 	modeRepeatN  = "repeatn"
 
+	apiGetFeature   = "getfeature"
+	apiListFeatures = "listfeatures"
+	apiRecordRoute  = "recordroute"
+	apiRouteChat    = "routechat"
+
 	defaultAddr    = ""
 	defaultPort    = "8080"
 	defaultTimeout = time.Second * 20
+	defaultWait    = time.Second * 3
 	defaultMode    = modeRepeatN
+	defaultAPI     = apiGetFeature
+	defaultN       = 10
 )
 
 func main() {
@@ -89,6 +98,8 @@ func main() {
 		if err := repeatN(ctx, client, timeout); err != nil && err != context.Canceled {
 			log.Fatalf("[main] %s", err)
 		}
+	default:
+		log.Fatalf("[main] unknown mode %s", mode)
 	}
 	log.Println("[main] finished")
 }
@@ -134,65 +145,55 @@ func firehose(ctx context.Context, client routeguide.Client, timeout time.Durati
 				}
 			}
 
-			time.Sleep(time.Second * 3)
+			time.Sleep(defaultWait)
 		}
 	}
 }
 
 func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duration) error {
-	for i := 0; i < 20; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
+	var call func(ctx context.Context) error
 
-		if err := client.GetFeature(ctx); err != nil {
-			if !isInjectedFault(err) {
-				return err
-			}
-			log.Println(err)
-		}
-		time.Sleep(time.Second * 3)
+	api, ok := os.LookupEnv("REMOTE_API")
+	if !ok {
+		api = defaultAPI
 	}
 
-	for i := 0; i < 20; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-
-		if err := client.ListFeatures(ctx); err != nil {
-			if !isInjectedFault(err) {
-				return err
-			}
-			log.Println(err)
+	var err error
+	n := defaultN
+	nEnv, ok := os.LookupEnv("MAX_REPEAT")
+	if ok {
+		n, err = strconv.Atoi(nEnv)
+		if err != nil {
+			return err
 		}
-
-		time.Sleep(time.Second * 3)
 	}
 
-	for i := 0; i < 20; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-
-		if err := client.RecordRoute(ctx); err != nil {
-			if !isInjectedFault(err) {
-				return err
-			}
-			log.Println(err)
-		}
-
-		time.Sleep(time.Second * 3)
+	switch strings.ToLower(api) {
+	case apiGetFeature:
+		call = client.GetFeature
+	case apiListFeatures:
+		call = client.ListFeatures
+	case apiRecordRoute:
+		call = client.RecordRoute
+	case apiRouteChat:
+		call = client.RouteChat
+	default:
+		return fmt.Errorf("Unsupported API %s", api)
 	}
 
-	for i := 0; i < 20; i++ {
+	log.Printf("calling %s %d times", api, n)
+	for i := 0; i < n; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		if err := client.RouteChat(ctx); err != nil {
+		if err := call(ctx); err != nil {
 			if !isInjectedFault(err) {
 				return err
 			}
 			log.Println(err)
 		}
 
-		time.Sleep(time.Second * 3)
+		time.Sleep(defaultWait)
 	}
 
 	return nil
