@@ -1,8 +1,11 @@
-run_server:
+server:
 	go run cmd/server/main.go
 
-run_client:
+client:
 	go run cmd/client/main.go
+
+ld2:
+	linkerd install --tls=optional | kubectl apply -f -
 
 mesh:
 	linkerd inject --tls=optional k8s.yaml | kubectl apply -f -
@@ -17,3 +20,4 @@ proto:
 clean:
 	kubectl delete -f server.yaml
 	kubectl delete -f client.yaml
+	linkerd install --tls=optional | kubectl delete -f -

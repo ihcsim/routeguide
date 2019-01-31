@@ -7,6 +7,7 @@ This exercise is developed using the following software:
 * Go 1.10.2
 * Protoc 3.6.1
 * dep v0.5.0
+* Linkerd2 edge-19.1.3
 
 The objective is to explore the following GRPC features:
 
