@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ihcsim/grpc-101/routeguide"
-	pb "github.com/ihcsim/grpc-101/routeguide/proto"
+	"github.com/ihcsim/routeguide"
+	pb "github.com/ihcsim/routeguide/proto"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
