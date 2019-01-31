@@ -7,17 +7,20 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/ihcsim/grpc-101/routeguide"
 	pb "github.com/ihcsim/grpc-101/routeguide/proto"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
 	modeFirehose = "firehose"
-	modeRepeatN  = "repeatN"
+	modeRepeatN  = "repeatn"
 
 	defaultAddr    = ""
 	defaultPort    = "8080"
@@ -77,14 +80,14 @@ func main() {
 	}()
 
 	log.Printf("[main] running in %s mode", mode)
-	switch mode {
+	switch strings.ToLower(mode) {
 	case modeFirehose:
 		if err := firehose(ctx, client, timeout); err != nil && err != context.Canceled {
 			log.Fatalf("[main] %s", err)
 		}
 	case modeRepeatN:
 		if err := repeatN(ctx, client, timeout); err != nil && err != context.Canceled {
-			log.Fatal("[main] %s", err)
+			log.Fatalf("[main] %s", err)
 		}
 	}
 	log.Println("[main] finished")
@@ -102,21 +105,32 @@ func firehose(ctx context.Context, client routeguide.Client, timeout time.Durati
 			// each API has a 25% of being invoked
 			n := rand.Intn(10)
 			if n < 3 {
-				if err := client.GetFeature(ctx); err != nil && !isTriggeredFault(err, "GetFeature") {
-					fmt.Println("test 1")
-					return err
+				if err := client.GetFeature(ctx); err != nil {
+					if !isInjectedFault(err) {
+						return err
+					}
+					log.Println(err)
 				}
 			} else if n < 5 && n >= 3 {
-				if err := client.ListFeatures(ctx); err != nil && !isTriggeredFault(err, "ListFeatures") {
-					return err
+				if err := client.ListFeatures(ctx); err != nil {
+					if !isInjectedFault(err) {
+						return err
+					}
+					log.Println(err)
 				}
 			} else if n < 7 && n >= 5 {
-				if err := client.RecordRoute(ctx); err != nil && !isTriggeredFault(err, "RecordRoute") {
-					return err
+				if err := client.RecordRoute(ctx); err != nil {
+					if !isInjectedFault(err) {
+						return err
+					}
+					log.Println(err)
 				}
 			} else {
-				if err := client.RouteChat(ctx); err != nil && !isTriggeredFault(err, "RouteChat") {
-					return err
+				if err := client.RouteChat(ctx); err != nil {
+					if !isInjectedFault(err) {
+						return err
+					}
+					log.Println(err)
 				}
 			}
 
@@ -130,8 +144,11 @@ func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duratio
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		if err := client.GetFeature(ctx); err != nil && !isTriggeredFault(err, "GetFeature") {
-			return err
+		if err := client.GetFeature(ctx); err != nil {
+			if !isInjectedFault(err) {
+				return err
+			}
+			log.Println(err)
 		}
 		time.Sleep(time.Second * 3)
 	}
@@ -140,19 +157,11 @@ func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duratio
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		if err := client.ListFeatures(ctx); err != nil && !isTriggeredFault(err, "ListFeatures") {
-			return (err)
-		}
-
-		time.Sleep(time.Second * 3)
-	}
-
-	for i := 0; i < 20; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-
-		if err := client.RecordRoute(ctx); err != nil && !isTriggeredFault(err, "RecordRoute") {
-			return (err)
+		if err := client.ListFeatures(ctx); err != nil {
+			if !isInjectedFault(err) {
+				return err
+			}
+			log.Println(err)
 		}
 
 		time.Sleep(time.Second * 3)
@@ -162,8 +171,25 @@ func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duratio
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		if err := client.RouteChat(ctx); err != nil && !isTriggeredFault(err, "RouteChat") {
-			return (err)
+		if err := client.RecordRoute(ctx); err != nil {
+			if !isInjectedFault(err) {
+				return err
+			}
+			log.Println(err)
+		}
+
+		time.Sleep(time.Second * 3)
+	}
+
+	for i := 0; i < 20; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		if err := client.RouteChat(ctx); err != nil {
+			if !isInjectedFault(err) {
+				return err
+			}
+			log.Println(err)
 		}
 
 		time.Sleep(time.Second * 3)
@@ -172,6 +198,11 @@ func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duratio
 	return nil
 }
 
-func isTriggeredFault(err error, api string) bool {
-	return err == routeguide.GetFault(api)
+func isInjectedFault(err error) bool {
+	s, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+
+	return s.Code() == codes.Unavailable && strings.Contains(s.Message(), routeguide.FaultMsg)
 }

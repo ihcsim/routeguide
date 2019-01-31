@@ -46,34 +46,26 @@ spec:
           containerPort: 8080
 
 ---
-kind: Deployment
-apiVersion: apps/v1
+kind: Pod
+apiVersion: v1
 metadata:
   name: rg-client
   labels:
     app: rg-client
 spec:
-  restart: Never
-  selector:
-    matchLabels:
-      app: rg-client
-  template:
-    metadata:
-      labels:
-        app: rg-client
-    spec:
-      containers:
-      - name: rg-client
-        image: routeguide
-        imagePullPolicy: Never
-        command:
-        - /rg-client
-        env:
-        - name: SERVER_HOST
-          value: rg-server
-        - name: SERVER_PORT
-          value: "8080"
-        - name: GRPC_TIMEOUT
-          value: "20s"
-        - name: MODE
-          value: "REPEATN"
+  restartPolicy: OnFailure
+  containers:
+  - name: rg-client
+    image: routeguide
+    imagePullPolicy: Never
+    command:
+    - /rg-client
+    env:
+    - name: SERVER_HOST
+      value: rg-server
+    - name: SERVER_PORT
+      value: "8080"
+    - name: GRPC_TIMEOUT
+      value: "20s"
+    - name: MODE
+      value: "REPEATN"

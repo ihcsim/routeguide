@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"os/signal"
@@ -19,6 +21,8 @@ const (
 	defaultFaultPercent = 0.3
 )
 
+var faultPercent = defaultFaultPercent
+
 func main() {
 	port, exist := os.LookupEnv("SERVER_PORT")
 	if !exist {
@@ -26,7 +30,6 @@ func main() {
 	}
 
 	var err error
-	faultPercent := defaultFaultPercent
 	faultPercentEnv, exist := os.LookupEnv("FAULT_PERCENT")
 	if exist {
 		faultPercent, err = strconv.ParseFloat(faultPercentEnv, 64)
@@ -41,7 +44,12 @@ func main() {
 	}
 	log.Printf("[main] listening at port %s\n", port)
 
-	grpcServer := grpc.NewServer([]grpc.ServerOption{}...)
+	opts := []grpc.ServerOption{
+		grpc.UnaryInterceptor(triggerFaultUnaryInterceptor),
+		grpc.StreamInterceptor(triggerFaultStreamInterceptor),
+	}
+
+	grpcServer := grpc.NewServer(opts...)
 	routeGuideServer, err := routeguide.NewServer(faultPercent)
 	if err != nil {
 		log.Fatalf("[main] fail to listen for tcp traffic at port %s", port)
@@ -61,4 +69,24 @@ func main() {
 	}
 
 	log.Println("[main] done")
+}
+
+func triggerFaultUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	if n := rand.Float64(); n <= faultPercent {
+		err := routeguide.GetFault(info.FullMethod)
+		log.Printf("[interceptor] (fault) %+v\n", err)
+		return nil, err
+	}
+
+	return handler(ctx, req)
+}
+
+func triggerFaultStreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	if n := rand.Float64(); n <= faultPercent {
+		err := routeguide.GetFault(info.FullMethod)
+		log.Printf("[interceptor] (fault) %+v\n", err)
+		return err
+	}
+
+	return handler(srv, ss)
 }

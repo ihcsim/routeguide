@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -40,21 +39,8 @@ type routeGuideServer struct {
 	faultPercent  float64
 }
 
-func (r *routeGuideServer) triggerFault(api string) error {
-	if n := rand.Float64(); n <= r.faultPercent {
-		log.Printf("%+v\n", GetFault(api))
-		return GetFault(api)
-	}
-
-	return nil
-}
-
 // GetFeature obtains the feature at a given position.
 func (r *routeGuideServer) GetFeature(ctx context.Context, point *pb.Point) (*pb.Feature, error) {
-	if err := r.triggerFault("GetFeature"); err != nil {
-		return nil, err
-	}
-
 	log.Printf("[GetFeature] (req) %+v\n", point)
 	for _, feature := range r.savedFeatures {
 		if proto.Equal(feature.Location, point) {
@@ -70,10 +56,6 @@ func (r *routeGuideServer) GetFeature(ctx context.Context, point *pb.Point) (*pb
 // The results are streamed rather than returned immediately as the rectangle
 // may cover a large area and contain a large number of features.
 func (r *routeGuideServer) ListFeatures(rectangle *pb.Rectangle, stream pb.RouteGuide_ListFeaturesServer) error {
-	if err := r.triggerFault("ListFeatures"); err != nil {
-		return err
-	}
-
 	log.Printf("[ListFeatures] (req) %+v\n", rectangle)
 	for _, feature := range r.savedFeatures {
 		if inRange(feature, rectangle) {
@@ -90,10 +72,6 @@ func (r *routeGuideServer) ListFeatures(rectangle *pb.Rectangle, stream pb.Route
 // RecordRoute accepts a stream of points on a route being traversed, returning a
 // route summary when traversal is completed.
 func (r *routeGuideServer) RecordRoute(stream pb.RouteGuide_RecordRouteServer) error {
-	if err := r.triggerFault("RecordRoute"); err != nil {
-		return err
-	}
-
 	var (
 		summary   = &pb.RouteSummary{}
 		startTime = time.Now()
@@ -135,10 +113,6 @@ func (r *routeGuideServer) RecordRoute(stream pb.RouteGuide_RecordRouteServer) e
 // RouteChat accepts a stream of route notes sent while a route is being traversed,
 // while receiving other route notes.
 func (r *routeGuideServer) RouteChat(stream pb.RouteGuide_RouteChatServer) error {
-	if err := r.triggerFault("RouteChat"); err != nil {
-		return err
-	}
-
 	for {
 		note, err := stream.Recv()
 		if err != nil {

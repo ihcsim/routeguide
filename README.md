@@ -21,10 +21,17 @@ Mode       | Description
 
 To run the server:
 ```
+# run locally
 $ make -C routeguide run_server
+
+# mesh and run on mkube
+$ make -C routeguide mesh_server
 ```
 
 To run the client:
 ```
 $ make -C routeguide run_client
+
+# mesh and run on mkube
+$ make -C routeguide mesh_client
 ```
