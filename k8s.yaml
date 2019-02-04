@@ -42,6 +42,22 @@ spec:
         ports:
         - name: grpc
           containerPort: 8080
+        readinessProbe:
+          initialDelaySeconds: 5
+          exec:
+            command:
+            - /bin/bash
+            - "-c"
+            - |
+              /grpc_health_probe -addr=:${SERVER_PORT} -service=routeguide.RouteGuide
+        livenessProbe:
+          initialDelaySeconds: 10
+          exec:
+            command:
+            - /bin/bash
+            - "-c"
+            - |
+              /grpc_health_probe -addr=:${SERVER_PORT} -service=routeguide.RouteGuide
 
 ---
 kind: ConfigMap

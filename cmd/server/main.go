@@ -14,6 +14,8 @@ import (
 	pb "github.com/ihcsim/routeguide/proto"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 const (
@@ -24,6 +26,9 @@ const (
 var faultPercent = defaultFaultPercent
 
 func main() {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, os.Kill)
+
 	port, exist := os.LookupEnv("SERVER_PORT")
 	if !exist {
 		port = defaultPort
@@ -54,16 +59,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("[main] fail to listen for tcp traffic at port %s", port)
 	}
+	pb.RegisterRouteGuideServer(grpcServer, routeGuideServer)
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, os.Kill)
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("routeguide.RouteGuide", grpc_health_v1.HealthCheckResponse_SERVING)
+
 	go func() {
 		<-stop
 		log.Println("[main] stopping")
+		healthServer.Shutdown()
 		grpcServer.GracefulStop()
 	}()
 
-	pb.RegisterRouteGuideServer(grpcServer, routeGuideServer)
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("[main] %s", err)
 	}
