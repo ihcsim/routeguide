@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -15,7 +16,10 @@ import (
 	pb "github.com/ihcsim/routeguide/proto"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/resolver"
+	"google.golang.org/grpc/resolver/manual"
 	"google.golang.org/grpc/status"
 )
 
@@ -28,54 +32,26 @@ const (
 	apiRecordRoute  = "recordroute"
 	apiRouteChat    = "routechat"
 
-	defaultAddr    = ""
-	defaultPort    = "8080"
-	defaultTimeout = time.Second * 20
-	defaultWait    = time.Second * 3
-	defaultMode    = modeRepeatN
-	defaultAPI     = apiGetFeature
-	defaultN       = 10
+	defaultAddr       = ""
+	defaultPort       = 8080
+	defaultTimeout    = time.Second * 20
+	defaultWait       = time.Second * 3
+	defaultMode       = modeRepeatN
+	defaultAPI        = apiGetFeature
+	defaultN          = 10
+	defaultServerAddr = "127.0.0.1:8080,127.0.0.1:8081,127.0.0.1:8082"
 )
 
 func main() {
-	addr, exist := os.LookupEnv("SERVER_HOST")
-	if !exist {
-		addr = defaultAddr
-	}
-
-	port, exist := os.LookupEnv("SERVER_PORT")
-	if !exist {
-		port = defaultPort
-	}
-
-	var err error
-	timeout := defaultTimeout
-	timeoutEnv, exist := os.LookupEnv("GRPC_TIMEOUT")
-	if exist {
-		timeout, err = time.ParseDuration(timeoutEnv)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	mode, exist := os.LookupEnv("MODE")
-	if !exist {
-		mode = defaultMode
-	}
-
 	var (
-		opts   = []grpc.DialOption{grpc.WithInsecure()}
-		client = routeguide.Client{}
-	)
+		addr      = flag.String("server", defaultAddr, "Name of the target server. It can be an IP address with port number.")
+		timeout   = flag.Duration("timeout", defaultTimeout, "Default connection timeout")
+		mode      = flag.String("mode", defaultMode, "Default mode to start the client in. Supported values: repeatn firehose")
+		enableLB  = flag.Bool("enable-load-balancing", false, "Set to true to enable client-side load balancing")
+		serverIPs = flag.String("server-ipv4", defaultServerAddr, "If load balancing is enabled, this is a list of comma-separated server addresses used by the GRPC name resolver")
 
-	log.Printf("[main] connecting to server at %s:%s", addr, port)
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", addr, port), opts...)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-	grpcClient := pb.NewRouteGuideClient(conn)
-	client.GRPC = grpcClient
+		opts = []grpc.DialOption{grpc.WithInsecure()}
+	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -88,14 +64,29 @@ func main() {
 		cancel()
 	}()
 
-	log.Printf("[main] running in %s mode", mode)
-	switch strings.ToLower(mode) {
+	if *enableLB {
+		opts = append(opts, grpc.WithBalancerName(roundrobin.Name))
+		initResolver(*serverIPs)
+	}
+
+	log.Printf("[main] connecting to server at %s", *addr)
+	conn, err := grpc.Dial(fmt.Sprintf("%s", *addr), opts...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	grpcClient := pb.NewRouteGuideClient(conn)
+	client := routeguide.Client{GRPC: grpcClient}
+
+	log.Printf("[main] running in %s mode", *mode)
+	switch strings.ToLower(*mode) {
 	case modeFirehose:
-		if err := firehose(ctx, client, timeout); err != nil && err != context.Canceled {
+		if err := firehose(ctx, client, *timeout); err != nil && err != context.Canceled {
 			log.Fatalf("[main] %s", err)
 		}
 	case modeRepeatN:
-		if err := repeatN(ctx, client, timeout); err != nil && err != context.Canceled {
+		if err := repeatN(ctx, client, *timeout); err != nil && err != context.Canceled {
 			log.Fatalf("[main] %s", err)
 		}
 	default:
@@ -206,4 +197,20 @@ func isInjectedFault(err error) bool {
 	}
 
 	return s.Code() == codes.Unavailable && strings.Contains(s.Message(), routeguide.FaultMsg)
+}
+
+func initResolver(serverIPs string) {
+	// set up the resolver builder, register its scheme
+	// and initialize the server IPv4 addresses
+	resolverBuilder, _ := manual.GenerateAndRegisterManualResolver()
+	defer resolverBuilder.Close()
+
+	addresses := []resolver.Address{}
+	for _, addr := range strings.Split(serverIPs, ",") {
+		addresses = append(addresses, resolver.Address{Addr: addr})
+	}
+	resolverBuilder.InitialAddrs(addresses)
+
+	resolver.Register(resolverBuilder)
+	resolver.SetDefaultScheme(resolverBuilder.Scheme())
 }

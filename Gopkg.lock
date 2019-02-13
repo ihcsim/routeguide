@@ -78,7 +78,7 @@
   revision = "8ac453e89fca495c0d17f98932642f392e2a11f3"
 
 [[projects]]
-  digest = "1:a887a56d0ff92cf05b4bb6004b46fc6e64d3fb6aca4eaeb1466bdce183ba5004"
+  digest = "1:f04a963f1d1a52ae1a5f53b7af2889ec772480149c14b8f35a70f01020f77105"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -110,6 +110,7 @@
     "peer",
     "resolver",
     "resolver/dns",
+    "resolver/manual",
     "resolver/passthrough",
     "stats",
     "status",
@@ -126,9 +127,12 @@
     "github.com/gogo/protobuf/proto",
     "github.com/golang/protobuf/proto",
     "google.golang.org/grpc",
+    "google.golang.org/grpc/balancer/roundrobin",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/health",
     "google.golang.org/grpc/health/grpc_health_v1",
+    "google.golang.org/grpc/resolver",
+    "google.golang.org/grpc/resolver/manual",
     "google.golang.org/grpc/status",
   ]
   solver-name = "gps-cdcl"
