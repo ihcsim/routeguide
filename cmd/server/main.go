@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 
 	"github.com/ihcsim/routeguide"
 	pb "github.com/ihcsim/routeguide/proto"
@@ -19,35 +19,26 @@ import (
 )
 
 const (
-	defaultPort         = "8080"
+	defaultPort         = 8080
 	defaultFaultPercent = 0.3
 )
 
 var faultPercent = defaultFaultPercent
 
 func main() {
+	var (
+		port         = flag.Int("port", defaultPort, "Default port to listen on")
+		faultPercent = flag.Float64("fault-percent", defaultFaultPercent, "Percentage of faulty responses to return to the client")
+	)
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
 
-	port, exist := os.LookupEnv("SERVER_PORT")
-	if !exist {
-		port = defaultPort
-	}
-
-	var err error
-	faultPercentEnv, exist := os.LookupEnv("FAULT_PERCENT")
-	if exist {
-		faultPercent, err = strconv.ParseFloat(faultPercentEnv, 64)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		log.Fatalf("[main] fail to listen for tcp traffic at port %s", port)
+		log.Fatalf("[main] fail to listen for tcp traffic at port %d", *port)
 	}
-	log.Printf("[main] listening at port %s\n", port)
+	log.Printf("[main] listening at port %d\n", *port)
 
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(triggerFaultUnaryInterceptor),
@@ -55,7 +46,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer(opts...)
-	routeGuideServer, err := routeguide.NewServer(faultPercent)
+	routeGuideServer, err := routeguide.NewServer(*faultPercent)
 	if err != nil {
 		log.Fatalf("[main] fail to listen for tcp traffic at port %s", port)
 	}
