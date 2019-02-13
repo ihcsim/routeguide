@@ -4,7 +4,7 @@ server:
 client:
 	go run cmd/client/main.go
 
-ld2:
+l5d2:
 	linkerd install --tls=optional | kubectl apply -f -
 
 mesh:

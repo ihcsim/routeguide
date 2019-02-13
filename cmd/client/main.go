@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"time"
 
@@ -32,8 +31,7 @@ const (
 	apiRecordRoute  = "recordroute"
 	apiRouteChat    = "routechat"
 
-	defaultAddr       = ""
-	defaultPort       = 8080
+	defaultAddr       = ":8080"
 	defaultTimeout    = time.Second * 20
 	defaultWait       = time.Second * 3
 	defaultMode       = modeRepeatN
@@ -47,11 +45,14 @@ func main() {
 		addr      = flag.String("server", defaultAddr, "Name of the target server. It can be an IP address with port number.")
 		timeout   = flag.Duration("timeout", defaultTimeout, "Default connection timeout")
 		mode      = flag.String("mode", defaultMode, "Default mode to start the client in. Supported values: repeatn firehose")
+		api       = flag.String("api", defaultAPI, "In the repeatn mode, this indicates the remote API to target")
+		n         = flag.Int("n", defaultN, "In the repeatn mode, this is the number of API calls to be repeated")
 		enableLB  = flag.Bool("enable-load-balancing", false, "Set to true to enable client-side load balancing")
 		serverIPs = flag.String("server-ipv4", defaultServerAddr, "If load balancing is enabled, this is a list of comma-separated server addresses used by the GRPC name resolver")
 
 		opts = []grpc.DialOption{grpc.WithInsecure()}
 	)
+	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -86,7 +87,7 @@ func main() {
 			log.Fatalf("[main] %s", err)
 		}
 	case modeRepeatN:
-		if err := repeatN(ctx, client, *timeout); err != nil && err != context.Canceled {
+		if err := repeatN(ctx, client, *timeout, *api, *n); err != nil && err != context.Canceled {
 			log.Fatalf("[main] %s", err)
 		}
 	default:
@@ -141,23 +142,8 @@ func firehose(ctx context.Context, client routeguide.Client, timeout time.Durati
 	}
 }
 
-func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duration) error {
+func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duration, api string, n int) error {
 	var call func(ctx context.Context) error
-
-	api, ok := os.LookupEnv("REMOTE_API")
-	if !ok {
-		api = defaultAPI
-	}
-
-	var err error
-	n := defaultN
-	nEnv, ok := os.LookupEnv("MAX_REPEAT")
-	if ok {
-		n, err = strconv.Atoi(nEnv)
-		if err != nil {
-			return err
-		}
-	}
 
 	switch strings.ToLower(api) {
 	case apiGetFeature:

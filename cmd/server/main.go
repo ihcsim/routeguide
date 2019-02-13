@@ -30,6 +30,7 @@ func main() {
 		port         = flag.Int("port", defaultPort, "Default port to listen on")
 		faultPercent = flag.Float64("fault-percent", defaultFaultPercent, "Percentage of faulty responses to return to the client")
 	)
+	flag.Parse()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
@@ -39,6 +40,7 @@ func main() {
 		log.Fatalf("[main] fail to listen for tcp traffic at port %d", *port)
 	}
 	log.Printf("[main] listening at port %d\n", *port)
+	log.Printf("[main] fault percentage: %.0f%%\n", (*faultPercent)*100)
 
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(triggerFaultUnaryInterceptor),
