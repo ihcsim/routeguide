@@ -10,7 +10,7 @@ spec:
     app: rg-server
   ports:
   - name: grpc
-    port: 8080
+    port: 8079
     targetPort: grpc
 
 ---
@@ -34,14 +34,17 @@ spec:
       - name: rg-server
         image: routeguide
         imagePullPolicy: Never
-        command:
-        - /rg-server
         envFrom:
         - configMapRef:
             name: rg-server-config
+        command:
+        - /bin/bash
+        - "-c"
+        - |
+          /rg-server -port ${SERVER_PORT} -fault-percent ${FAULT_PERCENT}
         ports:
         - name: grpc
-          containerPort: 8080
+          containerPort: 8079
         readinessProbe:
           initialDelaySeconds: 5
           exec:
@@ -67,7 +70,7 @@ metadata:
   labels:
     app: rg-server
 data:
-  SERVER_PORT: "8080"
+  SERVER_PORT: "8079"
   FAULT_PERCENT: "0.0"
 
 ---
@@ -84,7 +87,10 @@ spec:
     image: routeguide
     imagePullPolicy: Never
     command:
-    - /rg-client
+    - /bin/bash
+    - "-c"
+    - |
+      /rg-client -server ${SERVER_HOST}:${SERVER_PORT} -timeout ${GRPC_TIMEOUT} -mode ${MODE} -n ${MAX_REPEAT} -api ${REMOTE_API} -n ${MAX_REPEAT}
     envFrom:
     - configMapRef:
         name: rg-client-config
@@ -98,8 +104,10 @@ metadata:
     app: rg-client
 data:
   SERVER_HOST: rg-server
-  SERVER_PORT: "8080"
-  GRPC_TIMEOUT: "20s"
+  SERVER_PORT: "8079"
+  GRPC_TIMEOUT: 20s
   MODE: repeatn
-  MAX_REPEAT: "200"
+  MAX_REPEAT: "20"
   REMOTE_API: GetFeature
+  ENABLE_LOAD_BALANCING: "true"
+  RESOLVER_MODE: "dns"

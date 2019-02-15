@@ -17,6 +17,7 @@ The objective is to explore the following GRPC features:
 * Full duplex RPC
 * Interceptors (to return faulty responses)
 * Health checks
+* Lad balancing
 
 The GRPC server exposes the 4 interfaces as described in the official tutorial:
 
@@ -27,7 +28,7 @@ API            | Description
 `RecordRoute`  | Accepts a stream of points from the client and returns a summary of the route traversed.
 `RouteChat`    | Accepts a stream of route notes from the client and returns another stream of notes to the client.
 
-The GRPC server uses interceptors to return faulty responses. The [`FAULT_PERCENT`](https://github.com/ihcsim/routeguide/blob/465e7b7c0e6a6fc662f4cecd6ae76b213cabddf0/k8s.yaml#L42) environment variable can be used to adjust percentage of requests to be failed by the interceptors.
+The GRPC server uses interceptors to return faulty responses. The `-fault-percent` flag can be used to adjust percentage of requests to be failed by the interceptors.
 
 A GRPC client is included to call the APIs exposed by the GRPC server. It can be started in two modes:
 
@@ -39,9 +40,18 @@ Mode       | Description
 
 To run the server and client locally:
 ```
-$ make run_server
-$ make run_client
+$ make server
+$ make client
 ```
+
+To try the client-side round robin load balancing, start multiple instances of the servers:
+```
+$ SERVER_PORT=8080 make server
+$ SERVER_PORT=8081 make server
+$ SERVER_PORT=8082 make server
+$ make client
+```
+Notice the logs of the servers as requests are received from the client.
 
 To build the Dockerfile on Minikube:
 ```

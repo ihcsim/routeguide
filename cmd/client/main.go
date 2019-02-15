@@ -17,8 +17,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/resolver"
-	"google.golang.org/grpc/resolver/manual"
 	"google.golang.org/grpc/status"
 )
 
@@ -31,13 +29,14 @@ const (
 	apiRecordRoute  = "recordroute"
 	apiRouteChat    = "routechat"
 
-	defaultAddr       = ":8080"
-	defaultTimeout    = time.Second * 20
-	defaultWait       = time.Second * 3
-	defaultMode       = modeRepeatN
-	defaultAPI        = apiGetFeature
-	defaultN          = 10
-	defaultServerAddr = "127.0.0.1:8080,127.0.0.1:8081,127.0.0.1:8082"
+	defaultAddr         = ":8080"
+	defaultTimeout      = time.Second * 20
+	defaultWait         = time.Second * 3
+	defaultMode         = modeRepeatN
+	defaultAPI          = apiGetFeature
+	defaultN            = 10
+	defaultServerAddr   = "127.0.0.1:8080,127.0.0.1:8081,127.0.0.1:8082"
+	defaultResolverType = "manual"
 )
 
 func main() {
@@ -49,6 +48,7 @@ func main() {
 		n         = flag.Int("n", defaultN, "In the repeatn mode, this is the number of API calls to be repeated")
 		enableLB  = flag.Bool("enable-load-balancing", false, "Set to true to enable client-side load balancing")
 		serverIPs = flag.String("server-ipv4", defaultServerAddr, "If load balancing is enabled, this is a list of comma-separated server addresses used by the GRPC name resolver")
+		resolver  = flag.String("resolver", defaultResolverType, "The resolver to use. Supported values: dns manual")
 
 		opts = []grpc.DialOption{grpc.WithInsecure()}
 	)
@@ -66,8 +66,15 @@ func main() {
 	}()
 
 	if *enableLB {
+		log.Printf("[main] load balancing scheme: %s", roundrobin.Name)
 		opts = append(opts, grpc.WithBalancerName(roundrobin.Name))
-		initResolver(*serverIPs)
+
+		rt, err := ParseResolverType(*resolver)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("[main] resolver type: %s", rt)
+		registerResolver(rt, *serverIPs)
 	}
 
 	log.Printf("[main] connecting to server at %s", *addr)
@@ -183,20 +190,4 @@ func isInjectedFault(err error) bool {
 	}
 
 	return s.Code() == codes.Unavailable && strings.Contains(s.Message(), routeguide.FaultMsg)
-}
-
-func initResolver(serverIPs string) {
-	// set up the resolver builder, register its scheme
-	// and initialize the server IPv4 addresses
-	resolverBuilder, _ := manual.GenerateAndRegisterManualResolver()
-	defer resolverBuilder.Close()
-
-	addresses := []resolver.Address{}
-	for _, addr := range strings.Split(serverIPs, ",") {
-		addresses = append(addresses, resolver.Address{Addr: addr})
-	}
-	resolverBuilder.InitialAddrs(addresses)
-
-	resolver.Register(resolverBuilder)
-	resolver.SetDefaultScheme(resolverBuilder.Scheme())
 }
