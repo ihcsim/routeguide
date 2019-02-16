@@ -41,7 +41,7 @@ spec:
         - /bin/bash
         - "-c"
         - |
-          /rg-server -port ${SERVER_PORT} -fault-percent ${FAULT_PERCENT}
+          /rg-server -port=${SERVER_PORT} -fault-percent=${FAULT_PERCENT}
         ports:
         - name: grpc
           containerPort: 8079
@@ -86,14 +86,14 @@ spec:
   - name: rg-client
     image: routeguide
     imagePullPolicy: Never
+    envFrom:
+    - configMapRef:
+        name: rg-client-config
     command:
     - /bin/bash
     - "-c"
     - |
-      /rg-client -server ${SERVER_HOST}:${SERVER_PORT} -timeout ${GRPC_TIMEOUT} -mode ${MODE} -n ${MAX_REPEAT} -api ${REMOTE_API} -n ${MAX_REPEAT}
-    envFrom:
-    - configMapRef:
-        name: rg-client-config
+      /rg-client -server=${SERVER_HOST}:${SERVER_PORT} -timeout=${GRPC_TIMEOUT} -mode=${MODE} -n=${MAX_REPEAT} -api=${REMOTE_API} -n=${MAX_REPEAT} -enable-load-balancing=${ENABLE_LOAD_BALANCING} -resolver=${RESOLVER_TYPE}
 
 ---
 kind: ConfigMap
@@ -110,4 +110,4 @@ data:
   MAX_REPEAT: "20"
   REMOTE_API: GetFeature
   ENABLE_LOAD_BALANCING: "true"
-  RESOLVER_MODE: "dns"
+  RESOLVER_TYPE: dns
