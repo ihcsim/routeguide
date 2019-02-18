@@ -28,9 +28,13 @@ var faultPercent = defaultFaultPercent
 func main() {
 	var (
 		port         = flag.Int("port", defaultPort, "Default port to listen on")
-		faultPercent = flag.Float64("fault-percent", defaultFaultPercent, "Percentage of faulty responses to return to the client")
+		faultPercent = flag.Float64("fault-percent", defaultFaultPercent, "Percentage of faulty responses to return to the client. Supported range: [0.0, 1.0] ")
 	)
 	flag.Parse()
+
+	if fp := int(*faultPercent * 100); fp < 0 || fp > 100 {
+		log.Fatalf("Fault percent %.2f falls outside of supported range [0.0, 1.0]", *faultPercent)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
@@ -73,7 +77,8 @@ func main() {
 }
 
 func triggerFaultUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	if n := rand.Float64(); n <= faultPercent {
+	percent := int(faultPercent) * 100
+	if n := rand.Intn(100); info.FullMethod != "/grpc.health.v1.Health/Check" && percent > 0 && n <= percent {
 		err := routeguide.GetFault(info.FullMethod)
 		log.Printf("[interceptor] (fault) %+v\n", err)
 		return nil, err
@@ -83,7 +88,8 @@ func triggerFaultUnaryInterceptor(ctx context.Context, req interface{}, info *gr
 }
 
 func triggerFaultStreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	if n := rand.Float64(); n <= faultPercent {
+	percent := int(faultPercent) * 100
+	if n := rand.Intn(100); percent > 0 && n <= percent {
 		err := routeguide.GetFault(info.FullMethod)
 		log.Printf("[interceptor] (fault) %+v\n", err)
 		return err
