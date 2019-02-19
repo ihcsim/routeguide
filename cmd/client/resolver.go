@@ -52,7 +52,7 @@ func registerResolver(rt resolverType, serverIPs string) error {
 		b, _ := manual.GenerateAndRegisterManualResolver()
 		addresses := []resolver.Address{}
 		for _, addr := range strings.Split(serverIPs, ",") {
-			addresses = append(addresses, resolver.Address{Addr: addr})
+			addresses = append(addresses, resolver.Address{Addr: addr, Type: resolver.Backend})
 		}
 		b.InitialAddrs(addresses)
 		builder = b
@@ -60,6 +60,9 @@ func registerResolver(rt resolverType, serverIPs string) error {
 		return fmt.Errorf("Unsupported resolver type: %s", rt)
 	}
 
+	// Each resolver scheme package calls init() to register
+	// itself. So we need to call Register() again here to
+	// register the selected builder.
 	resolver.Register(builder)
 	resolver.SetDefaultScheme(builder.Scheme())
 	return nil
