@@ -39,9 +39,16 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	hostname, err := os.Hostname()
 	if err != nil {
-		log.Fatalf("[main] fail to listen for tcp traffic at port %d", *port)
+		log.Fatal(err)
+	}
+	hostname = fmt.Sprintf("%s:%d", hostname, *port)
+	log.Printf("[main] hostname: %s", hostname)
+
+	listener, err := net.Listen("tcp", hostname)
+	if err != nil {
+		log.Fatalf("[main] fail to listen for tcp traffic at %s", hostname)
 	}
 	log.Printf("[main] listening at port %d\n", *port)
 	log.Printf("[main] fault percentage: %.0f%%\n", (*faultPercent)*100)
@@ -52,9 +59,9 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer(opts...)
-	routeGuideServer, err := routeguide.NewServer(*faultPercent)
+	routeGuideServer, err := routeguide.NewServer(hostname, *faultPercent)
 	if err != nil {
-		log.Fatalf("[main] fail to listen for tcp traffic at port %s", port)
+		log.Fatalf("[main] fail to listen for tcp traffic at %s", hostname)
 	}
 	pb.RegisterRouteGuideServer(grpcServer, routeGuideServer)
 

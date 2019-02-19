@@ -12,16 +12,19 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	pb "github.com/ihcsim/routeguide/proto"
 )
 
 // NewServer returns a new route guide server that exposes 4 GRPC APIs.
-func NewServer(faultPercent float64) (pb.RouteGuideServer, error) {
+func NewServer(hostname string, faultPercent float64) (pb.RouteGuideServer, error) {
 	r := &routeGuideServer{
 		savedFeatures: []*pb.Feature{},
 		routeNotes:    make(map[string][]*pb.RouteNote),
 		faultPercent:  faultPercent,
+		hostname:      hostname,
 	}
 
 	err := json.Unmarshal(featuresData, &r.savedFeatures)
@@ -37,10 +40,14 @@ type routeGuideServer struct {
 	routeNotes    map[string][]*pb.RouteNote
 	mutex         sync.Mutex
 	faultPercent  float64
+	hostname      string
 }
 
 // GetFeature obtains the feature at a given position.
 func (r *routeGuideServer) GetFeature(ctx context.Context, point *pb.Point) (*pb.Feature, error) {
+	md := metadata.Pairs("server", r.hostname)
+	grpc.SetTrailer(ctx, md)
+
 	log.Printf("[GetFeature] (req) %+v\n", point)
 	for _, feature := range r.savedFeatures {
 		if proto.Equal(feature.Location, point) {
@@ -56,6 +63,9 @@ func (r *routeGuideServer) GetFeature(ctx context.Context, point *pb.Point) (*pb
 // The results are streamed rather than returned immediately as the rectangle
 // may cover a large area and contain a large number of features.
 func (r *routeGuideServer) ListFeatures(rectangle *pb.Rectangle, stream pb.RouteGuide_ListFeaturesServer) error {
+	md := metadata.Pairs("server", r.hostname)
+	stream.SetTrailer(md)
+
 	log.Printf("[ListFeatures] (req) %+v\n", rectangle)
 	for _, feature := range r.savedFeatures {
 		if inRange(feature, rectangle) {
@@ -72,6 +82,9 @@ func (r *routeGuideServer) ListFeatures(rectangle *pb.Rectangle, stream pb.Route
 // RecordRoute accepts a stream of points on a route being traversed, returning a
 // route summary when traversal is completed.
 func (r *routeGuideServer) RecordRoute(stream pb.RouteGuide_RecordRouteServer) error {
+	md := metadata.Pairs("server", r.hostname)
+	stream.SetTrailer(md)
+
 	var (
 		summary   = &pb.RouteSummary{}
 		startTime = time.Now()
@@ -113,6 +126,9 @@ func (r *routeGuideServer) RecordRoute(stream pb.RouteGuide_RecordRouteServer) e
 // RouteChat accepts a stream of route notes sent while a route is being traversed,
 // while receiving other route notes.
 func (r *routeGuideServer) RouteChat(stream pb.RouteGuide_RouteChatServer) error {
+	md := metadata.Pairs("server", r.hostname)
+	stream.SetTrailer(md)
+
 	for {
 		note, err := stream.Recv()
 		if err != nil {

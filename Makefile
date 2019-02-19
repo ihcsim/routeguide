@@ -3,7 +3,7 @@ SERVER_PORT ?= 8080
 FAULT_PERCENT ?= 0.3
 
 # client config
-SERVER_ADDR ?= :$(SERVER_PORT)
+SERVER_HOST ?= :$(SERVER_PORT)
 GRPC_TIMEOUT ?= 20s
 CLIENT_MODE ?= REPEATN
 MAX_REPEAT ?= 15
@@ -17,7 +17,7 @@ server:
 client:
 	go build -o ./cmd/client/client ./cmd/client/
 	./cmd/client/client \
-		-server=$(SERVER_ADDR) \
+		-server=$(SERVER_HOST) \
 		-timeout=$(GRPC_TIMEOUT) \
 		-mode=$(CLIENT_MODE) \
 		-n=$(MAX_REPEAT) \

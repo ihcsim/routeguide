@@ -29,7 +29,7 @@ const (
 	apiRecordRoute  = "recordroute"
 	apiRouteChat    = "routechat"
 
-	defaultAddr         = ":8080"
+	defaultServer       = ":8080"
 	defaultTimeout      = time.Second * 20
 	defaultWait         = time.Second * 3
 	defaultMode         = modeRepeatN
@@ -41,7 +41,7 @@ const (
 
 func main() {
 	var (
-		addr      = flag.String("server", defaultAddr, "Name of the target server. It can be an IP address with port number.")
+		server    = flag.String("server", defaultServer, "Name or IP of the target server, including port number.")
 		timeout   = flag.Duration("timeout", defaultTimeout, "Default connection timeout")
 		mode      = flag.String("mode", defaultMode, "Default mode to start the client in. Supported values: repeatn firehose")
 		api       = flag.String("api", defaultAPI, "In the repeatn mode, this indicates the remote API to target")
@@ -77,8 +77,8 @@ func main() {
 		registerResolver(rt, *serverIPs)
 	}
 
-	log.Printf("[main] connecting to server at %s", *addr)
-	conn, err := grpc.Dial(fmt.Sprintf("%s", *addr), opts...)
+	log.Printf("[main] connecting to server at %s", *server)
+	conn, err := grpc.Dial(fmt.Sprintf("%s", *server), opts...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duratio
 		return fmt.Errorf("Unsupported API %s", api)
 	}
 
-	log.Printf("calling %s %d times", api, n)
+	log.Printf("[main] calling %s %d times", api, n)
 	for i := 0; i < n; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()

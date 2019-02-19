@@ -8,6 +8,8 @@ import (
 	"time"
 
 	pb "github.com/ihcsim/routeguide/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // Client knows how to communicate with the GRPC server.
@@ -17,15 +19,18 @@ type Client struct {
 
 // GetFeature interacts with the GetFeature API on the GRPC server.
 func (c *Client) GetFeature(ctx context.Context) error {
-	point := randPoint()
+	var (
+		trailer metadata.MD
+		point   = randPoint()
+	)
 	log.Printf("[GetFeature] (req) %+v\n", point)
 
-	feature, err := c.GRPC.GetFeature(ctx, point)
+	feature, err := c.GRPC.GetFeature(ctx, point, grpc.Trailer(&trailer))
 	if err != nil {
 		return err
 	}
 
-	log.Printf("[GetFeature] (resp) %+v\n", feature)
+	log.Printf("[GetFeature] (resp) (server=%s) %+v\n", trailer["server"][0], feature)
 	return nil
 }
 
@@ -42,6 +47,7 @@ func (c *Client) ListFeatures(ctx context.Context) error {
 		return err
 	}
 
+	server := stream.Trailer()["server"]
 	for {
 		feature, err := stream.Recv()
 		if err != nil {
@@ -52,7 +58,7 @@ func (c *Client) ListFeatures(ctx context.Context) error {
 			return err
 		}
 
-		log.Printf("[ListFeatures] (resp) %+v\n", feature)
+		log.Printf("[ListFeatures] (resp) (server=%s) %+v\n", server[0], feature)
 	}
 
 	return nil
@@ -65,6 +71,7 @@ func (c *Client) RecordRoute(ctx context.Context) error {
 		return err
 	}
 
+	server := stream.Trailer()["server"]
 	for i := 0; i < 20; i++ {
 		point := randPoint()
 		log.Printf("[RecordRoute] (req) %+v\n", point)
@@ -79,7 +86,7 @@ func (c *Client) RecordRoute(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("[RecordRoute] (resp) %+v\n", summary)
+	log.Printf("[RecordRoute] (resp) (server=%s) %+v\n", server[0], summary)
 	return nil
 }
 
@@ -90,6 +97,7 @@ func (c *Client) RouteChat(ctx context.Context) error {
 		return err
 	}
 
+	server := stream.Trailer()["server"]
 	for i := 0; i < 20; i++ {
 		var (
 			point = randPoint()
@@ -110,7 +118,7 @@ func (c *Client) RouteChat(ctx context.Context) error {
 			return err
 		}
 
-		log.Printf("[RouteChat] {resp) %+v\n", resp)
+		log.Printf("[RouteChat] {resp) (server=%s) %+v\n", server[0], resp)
 	}
 
 	return nil
