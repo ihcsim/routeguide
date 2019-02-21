@@ -10,7 +10,7 @@ spec:
     app: rg-server
   ports:
   - name: grpc
-    port: 8079
+    port: 80
     targetPort: grpc
 
 ---
@@ -37,6 +37,11 @@ spec:
         envFrom:
         - configMapRef:
             name: rg-server-config
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         command:
         - /bin/bash
         - "-c"
@@ -44,7 +49,7 @@ spec:
           /rg-server -port=${SERVER_PORT} -fault-percent=${FAULT_PERCENT}
         ports:
         - name: grpc
-          containerPort: 8079
+          containerPort: 80
         readinessProbe:
           initialDelaySeconds: 5
           exec:
@@ -52,7 +57,7 @@ spec:
             - /bin/bash
             - "-c"
             - |
-              /grpc_health_probe -addr=:${SERVER_PORT} -service=routeguide.RouteGuide
+              /grpc_health_probe -addr=${POD_NAME}:${SERVER_PORT} -service=routeguide.RouteGuide
         livenessProbe:
           initialDelaySeconds: 10
           exec:
@@ -60,7 +65,7 @@ spec:
             - /bin/bash
             - "-c"
             - |
-              /grpc_health_probe -addr=:${SERVER_PORT} -service=routeguide.RouteGuide
+              /grpc_health_probe -addr=${POD_NAME}:${SERVER_PORT} -service=routeguide.RouteGuide
 
 ---
 kind: ConfigMap
@@ -70,44 +75,5 @@ metadata:
   labels:
     app: rg-server
 data:
-  SERVER_PORT: "8079"
+  SERVER_PORT: "80"
   FAULT_PERCENT: "0.0"
-
----
-kind: Pod
-apiVersion: v1
-metadata:
-  name: rg-client
-  labels:
-    app: rg-client
-spec:
-  restartPolicy: OnFailure
-  containers:
-  - name: rg-client
-    image: routeguide
-    imagePullPolicy: Never
-    envFrom:
-    - configMapRef:
-        name: rg-client-config
-    command:
-    - /bin/bash
-    - "-c"
-    - |
-      /rg-client -server=${SERVER_HOST}:${SERVER_PORT} -timeout=${GRPC_TIMEOUT} -mode=${MODE} -n=${MAX_REPEAT} -api=${REMOTE_API} -n=${MAX_REPEAT} -enable-load-balancing=${ENABLE_LOAD_BALANCING} -resolver=${RESOLVER_TYPE}
-
----
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: rg-client-config
-  labels:
-    app: rg-client
-data:
-  SERVER_HOST: rg-server
-  SERVER_PORT: "8079"
-  GRPC_TIMEOUT: 20s
-  MODE: repeatn
-  MAX_REPEAT: "20"
-  REMOTE_API: GetFeature
-  ENABLE_LOAD_BALANCING: "true"
-  RESOLVER_TYPE: dns

@@ -1,0 +1,37 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: rg-client
+  labels:
+    app: rg-client
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: rg-client
+    image: routeguide
+    imagePullPolicy: Never
+    envFrom:
+    - configMapRef:
+        name: rg-client-config
+    command:
+    - /bin/bash
+    - "-c"
+    - |
+      /rg-client -server=${SERVER_HOST}:${SERVER_PORT} -timeout=${GRPC_TIMEOUT} -mode=${MODE} -n=${MAX_REPEAT} -api=${REMOTE_API} -n=${MAX_REPEAT} -enable-load-balancing=${ENABLE_LOAD_BALANCING} -resolver=${RESOLVER_TYPE}
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rg-client-config
+  labels:
+    app: rg-client
+data:
+  SERVER_HOST: rg-server.default.svc.cluster.local
+  SERVER_PORT: "80"
+  GRPC_TIMEOUT: 60s
+  MODE: repeatn
+  MAX_REPEAT: "20"
+  REMOTE_API: ListFeatures
+  ENABLE_LOAD_BALANCING: "false"
+  RESOLVER_TYPE: dns
