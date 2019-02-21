@@ -5,11 +5,22 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/ihcsim/routeguide/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+)
+
+const (
+	APIGetFeature   = "getfeature"
+	APIListFeatures = "listfeatures"
+	APIRecordRoute  = "recordroute"
+	APIRouteChat    = "routechat"
+
+	unknownServerName = "unknown"
 )
 
 // Client knows how to communicate with the GRPC server.
@@ -20,17 +31,17 @@ type Client struct {
 // GetFeature interacts with the GetFeature API on the GRPC server.
 func (c *Client) GetFeature(ctx context.Context) error {
 	var (
-		trailer metadata.MD
-		point   = randPoint()
+		header metadata.MD
+		point  = randPoint()
 	)
 	log.Printf("[GetFeature] (req) %+v\n", point)
 
-	feature, err := c.GRPC.GetFeature(ctx, point, grpc.Trailer(&trailer))
+	feature, err := c.GRPC.GetFeature(ctx, point, grpc.Header(&header))
 	if err != nil {
 		return err
 	}
 
-	log.Printf("[GetFeature] (resp) (server=%s) %+v\n", trailer["server"][0], feature)
+	output(APIGetFeature, header, feature)
 	return nil
 }
 
@@ -47,7 +58,6 @@ func (c *Client) ListFeatures(ctx context.Context) error {
 		return err
 	}
 
-	server := stream.Trailer()["server"]
 	for {
 		feature, err := stream.Recv()
 		if err != nil {
@@ -58,7 +68,12 @@ func (c *Client) ListFeatures(ctx context.Context) error {
 			return err
 		}
 
-		log.Printf("[ListFeatures] (resp) (server=%s) %+v\n", server[0], feature)
+		header, err := stream.Header()
+		if err != nil {
+			return err
+		}
+
+		output(APIListFeatures, header, feature)
 	}
 
 	return nil
@@ -71,7 +86,6 @@ func (c *Client) RecordRoute(ctx context.Context) error {
 		return err
 	}
 
-	server := stream.Trailer()["server"]
 	for i := 0; i < 20; i++ {
 		point := randPoint()
 		log.Printf("[RecordRoute] (req) %+v\n", point)
@@ -86,7 +100,12 @@ func (c *Client) RecordRoute(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("[RecordRoute] (resp) (server=%s) %+v\n", server[0], summary)
+	header, err := stream.Header()
+	if err != nil {
+		return err
+	}
+
+	output(APIRecordRoute, header, summary)
 	return nil
 }
 
@@ -97,7 +116,6 @@ func (c *Client) RouteChat(ctx context.Context) error {
 		return err
 	}
 
-	server := stream.Trailer()["server"]
 	for i := 0; i < 20; i++ {
 		var (
 			point = randPoint()
@@ -118,8 +136,21 @@ func (c *Client) RouteChat(ctx context.Context) error {
 			return err
 		}
 
-		log.Printf("[RouteChat] {resp) (server=%s) %+v\n", server[0], resp)
+		header, err := stream.Header()
+		if err != nil {
+			return err
+		}
+
+		output(APIRouteChat, header, resp)
 	}
 
 	return nil
+}
+
+func output(api string, metadata metadata.MD, content proto.Message) {
+	server := unknownServerName
+	if serverName, ok := metadata["server"]; ok && len(serverName) > 0 {
+		server = serverName[0]
+	}
+	log.Printf("[%s] {resp) (server=%s) %+v\n", strings.Title(api), server, content)
 }

@@ -21,6 +21,8 @@ import (
 const (
 	defaultPort         = 8080
 	defaultFaultPercent = 0.3
+
+	pathHealthCheck = "/grpc.health.v1.Health/Check"
 )
 
 var faultPercent = defaultFaultPercent
@@ -39,24 +41,23 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
 
-	hostname, err := os.Hostname()
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("[main] fail to listen for tcp traffic at port %d", port)
 	}
-	hostname = fmt.Sprintf("%s:%d", hostname, *port)
-	log.Printf("[main] hostname: %s", hostname)
-
-	listener, err := net.Listen("tcp", hostname)
-	if err != nil {
-		log.Fatalf("[main] fail to listen for tcp traffic at %s", hostname)
-	}
-	log.Printf("[main] listening at port %d\n", *port)
 	log.Printf("[main] fault percentage: %.0f%%\n", (*faultPercent)*100)
 
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(triggerFaultUnaryInterceptor),
 		grpc.StreamInterceptor(triggerFaultStreamInterceptor),
 	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err)
+	}
+	hostname = fmt.Sprintf("%s:%d", hostname, *port)
+	log.Printf("[main] hostname: %s", hostname)
 
 	grpcServer := grpc.NewServer(opts...)
 	routeGuideServer, err := routeguide.NewServer(hostname, *faultPercent)
@@ -84,8 +85,8 @@ func main() {
 }
 
 func triggerFaultUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	percent := int(faultPercent) * 100
-	if n := rand.Intn(100); info.FullMethod != "/grpc.health.v1.Health/Check" && percent > 0 && n <= percent {
+	percent := int(faultPercent * 100)
+	if n := rand.Intn(100); info.FullMethod != pathHealthCheck && n > 0 && n <= percent {
 		err := routeguide.GetFault(info.FullMethod)
 		log.Printf("[interceptor] (fault) %+v\n", err)
 		return nil, err
@@ -95,8 +96,8 @@ func triggerFaultUnaryInterceptor(ctx context.Context, req interface{}, info *gr
 }
 
 func triggerFaultStreamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	percent := int(faultPercent) * 100
-	if n := rand.Intn(100); percent > 0 && n <= percent {
+	percent := int(faultPercent * 100)
+	if n := rand.Intn(100); info.FullMethod != pathHealthCheck && n > 0 && n <= percent {
 		err := routeguide.GetFault(info.FullMethod)
 		log.Printf("[interceptor] (fault) %+v\n", err)
 		return err

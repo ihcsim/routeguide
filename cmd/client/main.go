@@ -24,16 +24,11 @@ const (
 	modeFirehose = "firehose"
 	modeRepeatN  = "repeatn"
 
-	apiGetFeature   = "getfeature"
-	apiListFeatures = "listfeatures"
-	apiRecordRoute  = "recordroute"
-	apiRouteChat    = "routechat"
-
 	defaultServer       = ":8080"
 	defaultTimeout      = time.Second * 20
 	defaultWait         = time.Second * 3
 	defaultMode         = modeRepeatN
-	defaultAPI          = apiGetFeature
+	defaultAPI          = routeguide.APIGetFeature
 	defaultN            = 10
 	defaultServerAddr   = "127.0.0.1:8080,127.0.0.1:8081,127.0.0.1:8082"
 	defaultResolverType = "manual"
@@ -153,13 +148,13 @@ func repeatN(ctx context.Context, client routeguide.Client, timeout time.Duratio
 	var call func(ctx context.Context) error
 
 	switch strings.ToLower(api) {
-	case apiGetFeature:
+	case routeguide.APIGetFeature:
 		call = client.GetFeature
-	case apiListFeatures:
+	case routeguide.APIListFeatures:
 		call = client.ListFeatures
-	case apiRecordRoute:
+	case routeguide.APIRecordRoute:
 		call = client.RecordRoute
-	case apiRouteChat:
+	case routeguide.APIRouteChat:
 		call = client.RouteChat
 	default:
 		return fmt.Errorf("Unsupported API %s", api)
