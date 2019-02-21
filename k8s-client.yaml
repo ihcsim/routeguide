@@ -33,5 +33,5 @@ data:
   MODE: repeatn
   MAX_REPEAT: "20"
   REMOTE_API: ListFeatures
-  ENABLE_LOAD_BALANCING: "false"
+  ENABLE_LOAD_BALANCING: "true"
   RESOLVER_TYPE: dns

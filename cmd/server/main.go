@@ -19,24 +19,14 @@ import (
 )
 
 const (
-	defaultPort         = 8080
-	defaultFaultPercent = 0.3
-
+	defaultPort     = 8080
+	faultPercent    = 0.3
 	pathHealthCheck = "/grpc.health.v1.Health/Check"
 )
 
-var faultPercent = defaultFaultPercent
-
 func main() {
-	var (
-		port         = flag.Int("port", defaultPort, "Default port to listen on")
-		faultPercent = flag.Float64("fault-percent", defaultFaultPercent, "Percentage of faulty responses to return to the client. Supported range: [0.0, 1.0] ")
-	)
+	port := flag.Int("port", defaultPort, "Default port to listen on")
 	flag.Parse()
-
-	if fp := int(*faultPercent * 100); fp < 0 || fp > 100 {
-		log.Fatalf("Fault percent %.2f falls outside of supported range [0.0, 1.0]", *faultPercent)
-	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
@@ -45,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("[main] fail to listen for tcp traffic at port %d", port)
 	}
-	log.Printf("[main] fault percentage: %.0f%%\n", (*faultPercent)*100)
+	log.Printf("[main] fault percentage: %.0f%%\n", faultPercent)
 
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(triggerFaultUnaryInterceptor),
@@ -60,7 +50,7 @@ func main() {
 	log.Printf("[main] hostname: %s", hostname)
 
 	grpcServer := grpc.NewServer(opts...)
-	routeGuideServer, err := routeguide.NewServer(hostname, *faultPercent)
+	routeGuideServer, err := routeguide.NewServer(hostname)
 	if err != nil {
 		log.Fatalf("[main] fail to listen for tcp traffic at %s", hostname)
 	}

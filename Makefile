@@ -13,7 +13,7 @@ SERVER_IPV4 ?= 127.0.0.1:8080,127.0.0.1:8081,127.0.0.1:8082
 
 server:
 	go build -o ./cmd/server/server ./cmd/server/
-	./cmd/server/server -port=$(SERVER_PORT) -fault-percent=$(FAULT_PERCENT)
+	./cmd/server/server -port=$(SERVER_PORT)
 
 client:
 	go build -o ./cmd/client/client ./cmd/client/

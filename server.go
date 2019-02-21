@@ -21,11 +21,10 @@ import (
 const metadataServerKey = "server"
 
 // NewServer returns a new route guide server that exposes 4 GRPC APIs.
-func NewServer(hostname string, faultPercent float64) (pb.RouteGuideServer, error) {
+func NewServer(hostname string) (pb.RouteGuideServer, error) {
 	r := &routeGuideServer{
 		savedFeatures: []*pb.Feature{},
 		routeNotes:    make(map[string][]*pb.RouteNote),
-		faultPercent:  faultPercent,
 		hostname:      hostname,
 	}
 
@@ -41,7 +40,6 @@ type routeGuideServer struct {
 	savedFeatures []*pb.Feature
 	routeNotes    map[string][]*pb.RouteNote
 	mutex         sync.Mutex
-	faultPercent  float64
 	hostname      string
 }
 

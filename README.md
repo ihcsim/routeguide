@@ -30,7 +30,7 @@ API            | Description
 `RecordRoute`  | Accepts a stream of points from the client and returns a summary of the route traversed.
 `RouteChat`    | Accepts a stream of route notes from the client and returns another stream of notes to the client.
 
-It also uses interceptors to return faulty responses. The `-fault-percent` flag can be used to adjust percentage of failed requests.
+It also uses interceptors to return faulty responses.
 
 The gRPC client is used to make RPC calls to the server APIs. It can be started in two modes:
 
