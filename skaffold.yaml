@@ -1,0 +1,18 @@
+kind: Config
+apiVersion: skaffold/v1beta5
+build:
+  artifacts:
+  - image: routeguide
+    docker:
+      dockerfile: Dockerfile
+      cacheFrom:
+      - golang:1.11.5-alpine3.8
+      - alpine:3.8
+  tagPolicy:
+    sha256: {}
+  local:
+    push: false
+deploy:
+  kubectl:
+    manifests:
+    - k8s-server.yaml
