@@ -26,7 +26,13 @@ const (
 
 func main() {
 	port := flag.Int("port", defaultPort, "Default port to listen on")
+	help := flag.Bool("help", false, "Print usage")
 	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)

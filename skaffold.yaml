@@ -12,6 +12,10 @@ build:
     sha256: {}
   local:
     push: false
+test:
+- image: routeguide
+  structureTests:
+  - container-structure-test.yaml
 deploy:
   kubectl:
     manifests:

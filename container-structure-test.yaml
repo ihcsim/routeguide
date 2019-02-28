@@ -1,0 +1,15 @@
+schemaVersion: 2.0.0
+
+fileExistenceTests:
+- name: ensure file exists
+  path: /rg-server
+  shouldExist: true
+  permissions: '-rwxr-xr-x'
+  isExecutableBy: owner
+
+commandTests:
+- name: ensure executable
+  command: /rg-server
+  args:
+  - "-help"
+  exitCode: 0
