@@ -1,0 +1,28 @@
+apiVersion: linkerd.io/v1alpha1
+kind: ServiceProfile
+metadata:
+  creationTimestamp: null
+  name: rg-server.default.svc.cluster.local
+  namespace: default
+spec:
+  routes:
+  - condition:
+      method: POST
+      pathRegex: /routeguideproto\.RouteGuide/GetFeature
+    name: GetFeature
+    isRetryable: true
+  - condition:
+      method: POST
+      pathRegex: /routeguideproto\.RouteGuide/ListFeatures
+    name: ListFeatures
+    isRetryable: true
+  - condition:
+      method: POST
+      pathRegex: /routeguideproto\.RouteGuide/RecordRoute
+    name: RecordRoute
+    isRetryable: true
+  - condition:
+      method: POST
+      pathRegex: /routeguideproto\.RouteGuide/RouteChat
+    name: RouteChat
+    isRetryable: true
