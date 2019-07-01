@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("[main] fail to listen for tcp traffic at port %d", port)
 	}
-	log.Printf("[main] fault percentage: %.0f%%\n", faultPercent)
+	log.Printf("[main] fault percentage: %.1f%%\n", faultPercent*100)
 
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(triggerFaultUnaryInterceptor),
