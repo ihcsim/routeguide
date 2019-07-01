@@ -1,4 +1,4 @@
-FROM golang:1.11.5-alpine3.8 as builder
+FROM golang:1.12.6-alpine3.10 as builder
 ARG PROJECT_PATH=/go/src/github.com/ihcsim/routeguide
 ARG GRPC_HEALTH_PROBE_VERSION=v0.2.0
 WORKDIR ${PROJECT_PATH}
