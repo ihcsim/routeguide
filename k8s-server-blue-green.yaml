@@ -1,0 +1,166 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: rg-server
+spec:
+  type: ClusterIP
+  selector:
+    app: rg-server
+  ports:
+  - name: grpc
+    port: 80
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rg-server-green
+  labels:
+    app: rg-server
+spec:
+  type: ClusterIP
+  selector:
+    app: rg-server
+    color: green
+  ports:
+  - name: grpc
+    port: 80
+    targetPort: grpc
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rg-server-green
+  labels:
+    app: rg-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rg-server
+      color: green
+  template:
+    metadata:
+      labels:
+        app: rg-server
+        color: green
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      containers:
+      - name: rg-server
+        image: gcr.io/runconduit/routeguide
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: rg-server-config
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        command:
+        - /bin/bash
+        - "-c"
+        - |
+          /rg-server -port=${SERVER_PORT}
+        ports:
+        - name: grpc
+          containerPort: 80
+        readinessProbe:
+          initialDelaySeconds: 5
+          exec:
+            command:
+            - /bin/bash
+            - "-c"
+            - |
+              /grpc_health_probe -addr=${POD_NAME}:${SERVER_PORT} -service=routeguide.RouteGuide
+        livenessProbe:
+          initialDelaySeconds: 10
+          exec:
+            command:
+            - /bin/bash
+            - "-c"
+            - |
+              /grpc_health_probe -addr=${POD_NAME}:${SERVER_PORT} -service=routeguide.RouteGuide
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rg-server-blue
+  labels:
+    app: rg-server
+spec:
+  type: ClusterIP
+  selector:
+    app: rg-server
+    color: blue
+  ports:
+  - name: grpc
+    port: 80
+    targetPort: grpc
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rg-server-blue
+  labels:
+    app: rg-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rg-server
+      color: blue
+  template:
+    metadata:
+      labels:
+        app: rg-server
+        color: blue
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      containers:
+      - name: rg-server
+        image: gcr.io/runconduit/routeguide
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: rg-server-config
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        command:
+        - /bin/bash
+        - "-c"
+        - |
+          /rg-server -port=${SERVER_PORT}
+        ports:
+        - name: grpc
+          containerPort: 80
+        readinessProbe:
+          initialDelaySeconds: 5
+          exec:
+            command:
+            - /bin/bash
+            - "-c"
+            - |
+              /grpc_health_probe -addr=${POD_NAME}:${SERVER_PORT} -service=routeguide.RouteGuide
+        livenessProbe:
+          initialDelaySeconds: 10
+          exec:
+            command:
+            - /bin/bash
+            - "-c"
+            - |
+              /grpc_health_probe -addr=${POD_NAME}:${SERVER_PORT} -service=routeguide.RouteGuide
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: rg-server-config
+  labels:
+    app: rg-server
+data:
+  SERVER_PORT: "80"

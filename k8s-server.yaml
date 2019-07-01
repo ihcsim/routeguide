@@ -29,11 +29,13 @@ spec:
     metadata:
       labels:
         app: rg-server
+      annotations:
+        linkerd.io/inject: enabled
     spec:
       containers:
       - name: rg-server
-        image: routeguide
-        imagePullPolicy: Never
+        image: gcr.io/runconduit/routeguide
+        imagePullPolicy: Always
         envFrom:
         - configMapRef:
             name: rg-server-config

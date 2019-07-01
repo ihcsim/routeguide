@@ -4,12 +4,14 @@ metadata:
   name: rg-client
   labels:
     app: rg-client
+  annotations:
+    linkerd.io/inject: enabled
 spec:
   restartPolicy: OnFailure
   containers:
   - name: rg-client
-    image: routeguide
-    imagePullPolicy: Never
+    image: gcr.io/runconduit/routeguide
+    imagePullPolicy: Always
     envFrom:
     - configMapRef:
         name: rg-client-config
@@ -31,7 +33,7 @@ data:
   SERVER_PORT: "80"
   GRPC_TIMEOUT: 60s
   MODE: repeatn
-  MAX_REPEAT: "20"
-  REMOTE_API: ListFeatures
-  ENABLE_LOAD_BALANCING: "true"
+  MAX_REPEAT: "5000000"
+  REMOTE_API: RouteChat
+  ENABLE_LOAD_BALANCING: "false"
   RESOLVER_TYPE: dns

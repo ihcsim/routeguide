@@ -41,7 +41,7 @@ mesh:
 
 image:
 	@eval $$(minikube docker-env) ; \
-	docker build --rm -t routeguide .
+	docker build --rm -t gcr.io/runconduit/routeguide .
 
 proto:
 	protoc -I proto/route_guide.proto --go_out=plugins=grpc:proto
